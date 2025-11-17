@@ -1,0 +1,239 @@
+@page "/skills"
+
+<PageTitle>Skills - SkillSnap</PageTitle>
+
+<div class="skills-container">
+    <div class="skills-header">
+        <h1>My Skills</h1>
+        <p>Technologies and tools I work with</p>
+    </div>
+
+    <div class="skills-sections">
+        @foreach (var category in skillCategories)
+        {
+            <div class="skill-category">
+                <h3 class="category-title">@category.Key</h3>
+                <div class="skills-tags">
+                    @foreach (var skill in category.Value)
+                    {
+                        <span class="skill-tag @GetSkillLevelClass(skill.Level)">
+                            <span class="skill-name">@skill.Name</span>
+                            <span class="skill-level">@skill.Level</span>
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="skills-legend">
+        <h4>Proficiency Levels</h4>
+        <div class="legend-items">
+            <span class="legend-item">
+                <span class="skill-tag beginner-level">Beginner</span>
+            </span>
+            <span class="legend-item">
+                <span class="skill-tag intermediate-level">Intermediate</span>
+            </span>
+            <span class="legend-item">
+                <span class="skill-tag advanced-level">Advanced</span>
+            </span>
+            <span class="legend-item">
+                <span class="skill-tag expert-level">Expert</span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .skills-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .skills-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .skills-header h1 {
+        color: #333;
+        margin-bottom: 1rem;
+    }
+
+    .skills-header p {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .skills-sections {
+        margin-bottom: 3rem;
+    }
+
+    .skill-category {
+        margin-bottom: 2.5rem;
+    }
+
+    .category-title {
+        color: #333;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #007bff;
+        display: inline-block;
+    }
+
+    .skills-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .skill-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: default;
+    }
+
+    .skill-tag:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .skill-name {
+        font-weight: 600;
+    }
+
+    .skill-level {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .beginner-level {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+    }
+
+    .intermediate-level {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 2px solid #ffeaa7;
+    }
+
+    .advanced-level {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 2px solid #b8daff;
+    }
+
+    .expert-level {
+        background-color: #d4edda;
+        color: #155724;
+        border: 2px solid #c3e6cb;
+    }
+
+    .skills-legend {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .skills-legend h4 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .legend-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .legend-item .skill-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    @@media (max-width: 768px) {
+        .skills-container {
+            padding: 1rem;
+        }
+
+        .skills-tags {
+            gap: 0.5rem;
+        }
+
+        .skill-tag {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+        }
+
+        .legend-items {
+            justify-content: center;
+        }
+    }
+</style>
+
+@code {
+    public class Skill
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Level { get; set; } = "";
+    }
+
+    private Dictionary<string, List<Skill>> skillCategories = new Dictionary<string, List<Skill>>
+    {
+        ["Programming Languages"] = new List<Skill>
+        {
+            new Skill { Id = 1, Name = "C#", Level = "Advanced" },
+            new Skill { Id = 2, Name = "JavaScript", Level = "Advanced" },
+            new Skill { Id = 3, Name = "TypeScript", Level = "Intermediate" },
+            new Skill { Id = 4, Name = "Python", Level = "Intermediate" },
+            new Skill { Id = 5, Name = "SQL", Level = "Advanced" }
+        },
+        ["Web Technologies"] = new List<Skill>
+        {
+            new Skill { Id = 6, Name = "Blazor", Level = "Advanced" },
+            new Skill { Id = 7, Name = "ASP.NET Core", Level = "Advanced" },
+            new Skill { Id = 8, Name = "HTML5", Level = "Expert" },
+            new Skill { Id = 9, Name = "CSS3", Level = "Advanced" },
+            new Skill { Id = 10, Name = "React", Level = "Intermediate" }
+        },
+        ["Databases"] = new List<Skill>
+        {
+            new Skill { Id = 11, Name = "SQL Server", Level = "Advanced" },
+            new Skill { Id = 12, Name = "SQLite", Level = "Advanced" },
+            new Skill { Id = 13, Name = "Entity Framework", Level = "Advanced" },
+            new Skill { Id = 14, Name = "MongoDB", Level = "Intermediate" }
+        },
+        ["Tools & Technologies"] = new List<Skill>
+        {
+            new Skill { Id = 15, Name = "Git", Level = "Advanced" },
+            new Skill { Id = 16, Name = "Docker", Level = "Intermediate" },
+            new Skill { Id = 17, Name = "Azure", Level = "Intermediate" },
+            new Skill { Id = 18, Name = "Visual Studio", Level = "Expert" },
+            new Skill { Id = 19, Name = "REST APIs", Level = "Advanced" }
+        }
+    };
+
+    private string GetSkillLevelClass(string level)
+    {
+        return level.ToLower() switch
+        {
+            "beginner" => "beginner-level",
+            "intermediate" => "intermediate-level",
+            "advanced" => "advanced-level",
+            "expert" => "expert-level",
+            _ => "beginner-level"
+        };
+    }
+}

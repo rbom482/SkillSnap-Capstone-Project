@@ -1,0 +1,176 @@
+@page "/projects"
+
+<PageTitle>Projects - SkillSnap</PageTitle>
+
+<div class="projects-container">
+    <div class="projects-header">
+        <h1>My Projects</h1>
+        <p>Here are some of the projects I've worked on</p>
+    </div>
+
+    <div class="projects-grid">
+        @foreach (var project in sampleProjects)
+        {
+            <div class="project-card">
+                <div class="project-image">
+                    <img src="@project.ImageUrl" alt="@project.Title" />
+                </div>
+                <div class="project-content">
+                    <h3 class="project-title">@project.Title</h3>
+                    <p class="project-description">@project.Description</p>
+                    <div class="project-actions">
+                        <button class="btn btn-primary btn-sm">View Details</button>
+                        <button class="btn btn-outline-secondary btn-sm">Live Demo</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .projects-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .projects-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .projects-header h1 {
+        color: #333;
+        margin-bottom: 1rem;
+    }
+
+    .projects-header p {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .project-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .project-image {
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .project-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .project-content {
+        padding: 1.5rem;
+    }
+
+    .project-title {
+        color: #333;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+    }
+
+    .project-description {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .project-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-outline-secondary {
+        background-color: transparent;
+        color: #6c757d;
+        border: 1px solid #6c757d;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+    }
+</style>
+
+@code {
+    public class Project
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
+    }
+
+    private List<Project> sampleProjects = new List<Project>
+    {
+        new Project
+        {
+            Id = 1,
+            Title = "Task Tracker",
+            Description = "A comprehensive task management application built with Blazor and Entity Framework. Features include task creation, assignment, progress tracking, and team collaboration.",
+            ImageUrl = "https://via.placeholder.com/400x200/28a745/ffffff?text=Task+Tracker"
+        },
+        new Project
+        {
+            Id = 2,
+            Title = "Weather App",
+            Description = "Real-time weather forecasting application using external APIs. Provides current conditions, 7-day forecasts, and location-based weather alerts.",
+            ImageUrl = "https://via.placeholder.com/400x200/17a2b8/ffffff?text=Weather+App"
+        },
+        new Project
+        {
+            Id = 3,
+            Title = "E-Commerce Platform",
+            Description = "Full-stack e-commerce solution with product catalog, shopping cart, payment integration, and admin dashboard for inventory management.",
+            ImageUrl = "https://via.placeholder.com/400x200/ffc107/333333?text=E-Commerce"
+        },
+        new Project
+        {
+            Id = 4,
+            Title = "Portfolio Website",
+            Description = "Responsive portfolio website showcasing projects and skills. Built with modern web technologies and optimized for performance.",
+            ImageUrl = "https://via.placeholder.com/400x200/dc3545/ffffff?text=Portfolio"
+        }
+    };
+}
