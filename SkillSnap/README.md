@@ -15,6 +15,7 @@ A modern full-stack developer portfolio application built with .NET 9 and Blazor
 ## 🏗️ Architecture
 
 ### Backend (SkillSnap.Api)
+
 - **ASP.NET Core 9.0** Web API
 - **Entity Framework Core** with SQLite
 - **Swagger/OpenAPI** documentation
@@ -22,6 +23,7 @@ A modern full-stack developer portfolio application built with .NET 9 and Blazor
 - **Security Headers** middleware
 
 ### Frontend (SkillSnap.Client)
+
 - **Blazor WebAssembly** with .NET 9
 - **Reusable Razor Components**
 - **Responsive CSS** with modern styling
@@ -29,7 +31,7 @@ A modern full-stack developer portfolio application built with .NET 9 and Blazor
 
 ## 📦 Project Structure
 
-```
+```text
 SkillSnap/
 ├── SkillSnap.Api/              # Backend Web API
 │   ├── Controllers/            # API Controllers
@@ -46,6 +48,7 @@ SkillSnap/
 ## 🛠️ Getting Started
 
 ### Prerequisites
+
 - .NET 9.0 SDK
 - Visual Studio 2022 or VS Code
 - Git
@@ -53,22 +56,26 @@ SkillSnap/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/rbom482/SkillSnap-Capstone-Project.git
    cd SkillSnap-Capstone-Project
    ```
 
 2. **Restore dependencies**
+
    ```bash
    dotnet restore
    ```
 
 3. **Build the solution**
+
    ```bash
    dotnet build
    ```
 
 4. **Run the application**
+
    ```bash
    cd SkillSnap.Api
    dotnet run
@@ -82,6 +89,7 @@ SkillSnap/
 ### Database Setup
 
 1. **Create and seed the database**
+
    ```bash
    # The application will automatically create the database
    # To seed with sample data, make a POST request to:
@@ -91,6 +99,7 @@ SkillSnap/
 ## 🎯 Core Components
 
 ### Backend Features
+
 - **PortfolioUser Management**: User profiles and information
 - **Project Showcase**: Display of developer projects
 - **Skills Tracking**: Technical skills and proficiency levels
@@ -98,6 +107,7 @@ SkillSnap/
 - **API Documentation**: Comprehensive Swagger documentation
 
 ### Frontend Components
+
 - **Profile Page**: Developer profile display with statistics
 - **Projects Page**: Portfolio project showcase
 - **Skills Page**: Technical skills visualization
@@ -106,7 +116,9 @@ SkillSnap/
 ## 🔧 Configuration
 
 ### Database
+
 The application uses SQLite by default with the following connection string:
+
 ```json
 {
   "ConnectionStrings": {
@@ -116,6 +128,7 @@ The application uses SQLite by default with the following connection string:
 ```
 
 ### API Endpoints
+
 - `GET /api/portfoliousers` - Get all users
 - `GET /api/projects` - Get all projects  
 - `GET /api/skills` - Get all skills
@@ -125,6 +138,7 @@ The application uses SQLite by default with the following connection string:
 ## 🚀 Deployment
 
 The application is production-ready with:
+
 - Security headers configured
 - CORS policies implemented
 - Health checks enabled

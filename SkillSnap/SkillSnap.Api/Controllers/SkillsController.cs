@@ -61,7 +61,6 @@ namespace SkillSnap.Api.Controllers
                 {
                     _logger.LogInformation("Cache HIT for {CacheKey} - Returning {Count} cached skills", cacheKey, skills.Count);
                 }
-                }
 
                 return Ok(skills);
             }
