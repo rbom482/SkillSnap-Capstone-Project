@@ -1,0 +1,11 @@
+### Test SkillSnap API Endpoints
+
+### Seed Database with Sample Data
+POST http://localhost:5193/api/seeddata
+Content-Type: application/json
+
+###
+
+### Test if we can get users (optional - you'll need to create this endpoint later)
+# GET http://localhost:5193/api/users
+# Content-Type: application/json

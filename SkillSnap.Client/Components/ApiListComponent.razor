@@ -1,0 +1,198 @@
+@typeparam T where T : class
+@namespace SkillSnap.Client.Components
+
+<div class="api-list-component @CssClass">
+    @if (ShouldShowLoading)
+    {
+        <div class="loading-state">
+            @if (LoadingTemplate != null)
+            {
+                @LoadingTemplate
+            }
+            else
+            {
+                <div class="default-loading">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">@LoadingText</p>
+                </div>
+            }
+        </div>
+    }
+    else if (ShouldShowError)
+    {
+        <div class="error-state">
+            @if (ErrorTemplate != null)
+            {
+                @ErrorTemplate
+            }
+            else
+            {
+                <div class="default-error">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Something went wrong</h3>
+                    <p class="error-message">@ErrorMessage</p>
+                    @if (ShowRetryButton)
+                    {
+                        <button class="btn btn-primary retry-button" @onclick="HandleRetryAsync">
+                            Try Again
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (ShouldShowEmpty)
+    {
+        <div class="empty-state">
+            @if (EmptyTemplate != null)
+            {
+                @EmptyTemplate
+            }
+            else
+            {
+                <div class="default-empty">
+                    <div class="empty-icon">📋</div>
+                    <h3>@EmptyText</h3>
+                    <p>There are no items to display at the moment.</p>
+                </div>
+            }
+        </div>
+    }
+    else if (ShouldShowItems)
+    {
+        <div class="items-container">
+            @if (ItemTemplate != null)
+            {
+                @foreach (var item in Items!)
+                {
+                    <div class="item-wrapper">
+                        @ItemTemplate(item)
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .api-list-component {
+        width: 100%;
+    }
+
+    .loading-state, .error-state, .empty-state {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px;
+        text-align: center;
+    }
+
+    .default-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        color: #6c757d;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .default-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        max-width: 400px;
+        padding: 2rem;
+        background: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: 8px;
+    }
+
+    .error-icon {
+        font-size: 3rem;
+    }
+
+    .default-error h3 {
+        color: #e53e3e;
+        margin: 0;
+    }
+
+    .error-message {
+        color: #742a2a;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .retry-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .retry-button:hover {
+        background-color: #0056b3;
+    }
+
+    .default-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        color: #6c757d;
+        padding: 2rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        opacity: 0.7;
+    }
+
+    .default-empty h3 {
+        color: #495057;
+        margin: 0;
+    }
+
+    .default-empty p {
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .items-container {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .item-wrapper {
+        width: 100%;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive design */
+    @@media (max-width: 768px) {
+        .default-error, .default-empty {
+            padding: 1rem;
+        }
+    }
+</style>

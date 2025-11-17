@@ -1,0 +1,166 @@
+@page "/profile"
+@using SkillSnap.Client.Components
+
+<PageTitle>Profile - SkillSnap</PageTitle>
+
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>My Profile</h1>
+        <p class="subtitle">Welcome to my portfolio</p>
+    </div>
+
+    <ProfileCard Name="@userData.Name" 
+                 Bio="@userData.Bio" 
+                 ImageUrl="@userData.ProfileImageUrl"
+                 ShowActions="true"
+                 CssClass="main-profile">
+        <button class="btn btn-primary">Edit Profile</button>
+        <button class="btn btn-outline-secondary">Download CV</button>
+    </ProfileCard>
+
+    <div class="profile-stats">
+        <div class="stat-card">
+            <h3>@projectCount</h3>
+            <p>Projects Completed</p>
+        </div>
+        <div class="stat-card">
+            <h3>@skillCount</h3>
+            <p>Technical Skills</p>
+        </div>
+        <div class="stat-card">
+            <h3>3+</h3>
+            <p>Years Experience</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .profile-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .profile-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .profile-header h1 {
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 2.5rem;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .main-profile {
+        margin-bottom: 3rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .profile-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 3rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card h3 {
+        font-size: 2.5rem;
+        color: #007bff;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+
+    .stat-card p {
+        color: #666;
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .btn {
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        transform: translateY(-1px);
+    }
+
+    .btn-outline-secondary {
+        background-color: transparent;
+        color: #6c757d;
+        border: 2px solid #6c757d;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    @@media (max-width: 768px) {
+        .profile-container {
+            padding: 1rem;
+        }
+
+        .profile-header h1 {
+            font-size: 2rem;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+@code {
+    private UserProfile userData = new()
+    {
+        Name = "Jordan Developer",
+        Bio = "Full-stack developer passionate about learning new tech. I specialize in building modern web applications with .NET and Blazor, always eager to explore cutting-edge technologies.",
+        ProfileImageUrl = "https://via.placeholder.com/150x150/007bff/ffffff?text=JD"
+    };
+
+    private int projectCount = 4;
+    private int skillCount = 15;
+
+    public class UserProfile
+    {
+        public string Name { get; set; } = "";
+        public string Bio { get; set; } = "";
+        public string ProfileImageUrl { get; set; } = "";
+    }
+}
