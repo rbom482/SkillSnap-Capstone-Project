@@ -1,4 +1,10 @@
 @page "/projects"
+@using SkillSnap.Client.Services
+@using SkillSnap.Client.Components
+@using SkillSnap.Client.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject ProjectService ProjectService
+@inject NotificationService NotificationService
 
 <PageTitle>Projects - SkillSnap</PageTitle>
 
@@ -8,24 +14,115 @@
         <p>Here are some of the projects I've worked on</p>
     </div>
 
-    <div class="projects-grid">
-        @foreach (var project in sampleProjects)
-        {
+    <!-- Add New Project Form with Validation -->
+    <div class="add-project-section">
+        <h3>Add New Project</h3>
+        <ValidatedForm Model="@projectForm" 
+                       OnValidSubmit="@HandleValidSubmit" 
+                       OnInvalidSubmit="@HandleInvalidSubmit"
+                       IsSubmitting="@isSubmitting"
+                       SubmitButtonText="Add Project"
+                       SubmittingText="Adding Project...">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="title">Project Title *</label>
+                    <InputText @bind-Value="projectForm.Title" class="form-control" id="title" placeholder="Enter project title" />
+                    <ValidationMessage For="@(() => projectForm.Title)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <InputTextArea @bind-Value="projectForm.Description" class="form-control" id="description" 
+                                   placeholder="Describe your project" rows="3" />
+                    <ValidationMessage For="@(() => projectForm.Description)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="imageUrl">Image URL</label>
+                    <InputText @bind-Value="projectForm.ImageUrl" class="form-control" id="imageUrl" 
+                               placeholder="https://example.com/image.jpg" />
+                    <ValidationMessage For="@(() => projectForm.ImageUrl)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="githubUrl">GitHub Repository</label>
+                    <InputText @bind-Value="projectForm.GitHubUrl" class="form-control" id="githubUrl" 
+                               placeholder="https://github.com/username/repository" />
+                    <ValidationMessage For="@(() => projectForm.GitHubUrl)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="demoUrl">Live Demo URL</label>
+                    <InputText @bind-Value="projectForm.LiveDemoUrl" class="form-control" id="demoUrl" 
+                               placeholder="https://your-demo-site.com" />
+                    <ValidationMessage For="@(() => projectForm.LiveDemoUrl)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="technologies">Technologies Used</label>
+                    <InputText @bind-Value="projectForm.Technologies" class="form-control" id="technologies" 
+                               placeholder="C#, Blazor, Entity Framework" />
+                    <ValidationMessage For="@(() => projectForm.Technologies)" />
+                </div>
+            </div>
+        </ValidatedForm>
+    </div>
+
+    <!-- Enhanced Projects List with ApiListComponent -->
+    <ApiListComponent T="Project" 
+                      Items="@projects" 
+                      IsLoading="@isLoading" 
+                      ErrorMessage="@errorMessage"
+                      OnRetry="@LoadProjectsAsync"
+                      CssClass="projects-grid">
+        <ItemTemplate Context="project">
             <div class="project-card">
                 <div class="project-image">
-                    <img src="@project.ImageUrl" alt="@project.Title" />
+                    <img src="@(!string.IsNullOrEmpty(project.ImageUrl) ? project.ImageUrl : "https://via.placeholder.com/400x200/6c757d/ffffff?text=No+Image")" 
+                         alt="@project.Title" 
+                         loading="lazy" />
                 </div>
                 <div class="project-content">
                     <h3 class="project-title">@project.Title</h3>
                     <p class="project-description">@project.Description</p>
+                    @if (!string.IsNullOrEmpty(project.Technologies))
+                    {
+                        <p class="project-tech"><strong>Tech:</strong> @project.Technologies</p>
+                    }
+                    <div class="project-metadata">
+                        <small class="text-muted">Created: @project.CreatedAt.ToString("MMM dd, yyyy")</small>
+                    </div>
                     <div class="project-actions">
-                        <button class="btn btn-primary btn-sm">View Details</button>
-                        <button class="btn btn-outline-secondary btn-sm">Live Demo</button>
+                        @if (!string.IsNullOrEmpty(project.GitHubUrl))
+                        {
+                            <a href="@project.GitHubUrl" target="_blank" class="btn btn-primary btn-sm" rel="noopener">
+                                <i class="fab fa-github"></i> GitHub
+                            </a>
+                        }
+                        @if (!string.IsNullOrEmpty(project.LiveDemoUrl))
+                        {
+                            <a href="@project.LiveDemoUrl" target="_blank" class="btn btn-outline-secondary btn-sm" rel="noopener">
+                                <i class="fas fa-external-link-alt"></i> Demo
+                            </a>
+                        }
+                        <button @onclick="() => DeleteProjectAsync(project.Id)" 
+                                class="btn btn-danger btn-sm" 
+                                disabled="@isDeleting"
+                                title="Delete project">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
                     </div>
                 </div>
             </div>
-        }
-    </div>
+        </ItemTemplate>
+        <EmptyTemplate>
+            <div class="empty-state-custom">
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <h3>No Projects Yet</h3>
+                <p>Start showcasing your work by adding your first project above!</p>
+            </div>
+        </EmptyTemplate>
+    </ApiListComponent>
 </div>
 
 <style>
@@ -131,46 +228,289 @@
         background-color: #6c757d;
         color: white;
     }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .add-project-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .add-project-section h3 {
+        color: #333;
+        margin-bottom: 1rem;
+    }
+
+    .project-form {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .form-input {
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+
+    .loading, .no-projects {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .project-tech {
+        color: #28a745;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Enhanced form styles */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .form-control.validation-error {
+        border-color: #dc3545;
+    }
+
+    .validation-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .project-metadata {
+        margin: 0.5rem 0;
+    }
+
+    .text-muted {
+        color: #6c757d !important;
+    }
+
+    .empty-state-custom {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6c757d;
+    }
+
+    .empty-state-custom h3 {
+        color: #495057;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-custom p {
+        font-size: 1.1rem;
+        line-height: 1.5;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    .fa-3x {
+        font-size: 3em;
+    }
+
+    /* Projects grid enhancement */
+    .projects-grid .items-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+
+    /* Button enhancements */
+    .btn i {
+        margin-right: 0.5rem;
+    }
+
+    .btn-sm i {
+        margin-right: 0.25rem;
+    }
+
+    /* Responsive improvements */
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .projects-grid .items-container {
+            grid-template-columns: 1fr;
+        }
+
+        .project-actions {
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+        }
+    }
 </style>
 
 @code {
-    public class Project
+    private List<Project>? projects;
+    private ProjectFormModel projectForm = new();
+    private bool isLoading = false;
+    private bool isSubmitting = false;
+    private bool isDeleting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
     {
-        public int Id { get; set; }
-        public string Title { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string ImageUrl { get; set; } = "";
+        await LoadProjectsAsync();
     }
 
-    private List<Project> sampleProjects = new List<Project>
+    private async Task LoadProjectsAsync()
     {
-        new Project
+        try
         {
-            Id = 1,
-            Title = "Task Tracker",
-            Description = "A comprehensive task management application built with Blazor and Entity Framework. Features include task creation, assignment, progress tracking, and team collaboration.",
-            ImageUrl = "https://via.placeholder.com/400x200/28a745/ffffff?text=Task+Tracker"
-        },
-        new Project
-        {
-            Id = 2,
-            Title = "Weather App",
-            Description = "Real-time weather forecasting application using external APIs. Provides current conditions, 7-day forecasts, and location-based weather alerts.",
-            ImageUrl = "https://via.placeholder.com/400x200/17a2b8/ffffff?text=Weather+App"
-        },
-        new Project
-        {
-            Id = 3,
-            Title = "E-Commerce Platform",
-            Description = "Full-stack e-commerce solution with product catalog, shopping cart, payment integration, and admin dashboard for inventory management.",
-            ImageUrl = "https://via.placeholder.com/400x200/ffc107/333333?text=E-Commerce"
-        },
-        new Project
-        {
-            Id = 4,
-            Title = "Portfolio Website",
-            Description = "Responsive portfolio website showcasing projects and skills. Built with modern web technologies and optimized for performance.",
-            ImageUrl = "https://via.placeholder.com/400x200/dc3545/ffffff?text=Portfolio"
+            isLoading = true;
+            errorMessage = null;
+            
+            projects = await ProjectService.GetProjectAsync();
+            
+            if (projects.Count == 0)
+            {
+                NotificationService.ShowInfo("No projects found. Add your first project to get started!");
+            }
         }
-    };
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load projects. Please try again.";
+            NotificationService.ShowError(errorMessage);
+            Console.WriteLine($"Error loading projects: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleValidSubmit(EditContext context)
+    {
+        try
+        {
+            isSubmitting = true;
+            
+            var project = projectForm.ToProject();
+            var result = await ProjectService.AddProjectAsync(project);
+            
+            if (result.IsSuccess)
+            {
+                NotificationService.ShowSuccess($"Project '{project.Title}' added successfully!");
+                projectForm.Reset();
+                await LoadProjectsAsync();
+            }
+            else
+            {
+                NotificationService.ShowError(result.ErrorMessage ?? "Failed to add project.");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError("An unexpected error occurred while adding the project.");
+            Console.WriteLine($"Error adding project: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleInvalidSubmit(EditContext context)
+    {
+        NotificationService.ShowWarning("Please correct the errors in the form before submitting.");
+    }
+
+    private async Task DeleteProjectAsync(int id)
+    {
+        try
+        {
+            isDeleting = true;
+            
+            var project = projects?.FirstOrDefault(p => p.Id == id);
+            if (project == null) return;
+
+            var success = await ProjectService.DeleteProjectAsync(id);
+            
+            if (success)
+            {
+                NotificationService.ShowSuccess($"Project '{project.Title}' deleted successfully.");
+                await LoadProjectsAsync();
+            }
+            else
+            {
+                NotificationService.ShowError("Failed to delete project. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError("An error occurred while deleting the project.");
+            Console.WriteLine($"Error deleting project: {ex.Message}");
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
 }

@@ -67,17 +67,14 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-// Add CORS for development
+// Add CORS for Blazor client
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevelopmentCors", policy =>
+    options.AddPolicy("AllowClient", policy =>
     {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        }
+        policy.WithOrigins("https://localhost:7181")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
@@ -119,13 +116,15 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkillSnap API V1");
         c.RoutePrefix = "api/docs";
     });
-    app.UseCors("DevelopmentCors");
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts(); // Enable HSTS in production
 }
+
+// Enable CORS for Blazor client
+app.UseCors("AllowClient");
 
 // Security middleware
 app.UseHttpsRedirection();

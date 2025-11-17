@@ -1,0 +1,201 @@
+@using SkillSnap.Client.Services
+@inject NotificationService NotificationService
+@implements IDisposable
+
+<div class="notifications-container">
+    @foreach (var notification in notifications)
+    {
+        <div class="notification notification-@(notification.Type.ToString().ToLower())" 
+             id="notification-@notification.Id">
+            <div class="notification-content">
+                <div class="notification-icon">
+                    @GetIcon(notification.Type)
+                </div>
+                <div class="notification-message">
+                    @notification.Message
+                </div>
+                <button class="notification-close" @onclick="() => RemoveNotification(notification.Id)">
+                    ×
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .notifications-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        max-width: 400px;
+        pointer-events: none;
+    }
+
+    .notification {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        margin-bottom: 12px;
+        padding: 16px;
+        border-left: 4px solid;
+        animation: slideIn 0.3s ease-out;
+        pointer-events: auto;
+        max-width: 100%;
+        word-wrap: break-word;
+    }
+
+    .notification-success {
+        border-left-color: #28a745;
+        background-color: #f8fff9;
+    }
+
+    .notification-error {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+
+    .notification-warning {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+    }
+
+    .notification-info {
+        border-left-color: #17a2b8;
+        background-color: #f0f9ff;
+    }
+
+    .notification-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .notification-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .notification-message {
+        flex: 1;
+        color: #333;
+        line-height: 1.5;
+        font-size: 14px;
+    }
+
+    .notification-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #666;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .notification-close:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+        color: #333;
+    }
+
+    @@keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    .notification.removing {
+        animation: slideOut 0.3s ease-in forwards;
+    }
+
+    @@media (max-width: 768px) {
+        .notifications-container {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+
+        .notification {
+            padding: 12px;
+        }
+
+        .notification-message {
+            font-size: 13px;
+        }
+    }
+</style>
+
+@code {
+    private List<NotificationMessage> notifications = new();
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnNotificationAdded += HandleNotificationAdded;
+        NotificationService.OnNotificationRemoved += HandleNotificationRemoved;
+        notifications = NotificationService.GetNotifications();
+    }
+
+    private void HandleNotificationAdded(NotificationMessage notification)
+    {
+        notifications.Add(notification);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleNotificationRemoved(int id)
+    {
+        var notification = notifications.FirstOrDefault(n => n.Id == id);
+        if (notification != null)
+        {
+            notifications.Remove(notification);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RemoveNotification(int id)
+    {
+        NotificationService.RemoveNotification(id);
+    }
+
+    private string GetIcon(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Success => "✅",
+            NotificationType.Error => "❌",
+            NotificationType.Warning => "⚠️",
+            NotificationType.Info => "ℹ️",
+            _ => "📝"
+        };
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNotificationAdded -= HandleNotificationAdded;
+        NotificationService.OnNotificationRemoved -= HandleNotificationRemoved;
+    }
+}
