@@ -159,6 +159,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add memory cache for performance optimization
+builder.Services.AddMemoryCache();
+
 // Add health checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<SkillSnapContext>();

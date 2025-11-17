@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SkillSnap.Api.Data;
 using SkillSnap.Api.Models;
 
@@ -11,14 +12,17 @@ namespace SkillSnap.Api.Controllers
     public class ProjectsController : ControllerBase
     {
         private readonly SkillSnapContext _context;
+        private readonly IMemoryCache _cache;
 
-        public ProjectsController(SkillSnapContext context)
+        public ProjectsController(SkillSnapContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         /// <summary>
         /// Get all projects with their associated portfolio user data
+        /// Implements in-memory caching with 5-minute expiration for improved performance
         /// </summary>
         /// <returns>List of all projects</returns>
         [HttpGet]
@@ -26,9 +30,26 @@ namespace SkillSnap.Api.Controllers
         {
             try
             {
-                var projects = await _context.Projects
-                    .Include(p => p.PortfolioUser)
-                    .ToListAsync();
+                const string cacheKey = "projects_all";
+                
+                // Try to get projects from cache first
+                if (!_cache.TryGetValue(cacheKey, out List<Project>? projects) || projects == null)
+                {
+                    // If not in cache, fetch from database
+                    projects = await _context.Projects
+                        .Include(p => p.PortfolioUser)
+                        .ToListAsync();
+
+                    // Cache the results with 5-minute expiration
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                        SlidingExpiration = TimeSpan.FromMinutes(2),
+                        Priority = CacheItemPriority.Normal
+                    };
+                    
+                    _cache.Set(cacheKey, projects, cacheOptions);
+                }
 
                 return Ok(projects);
             }
@@ -97,6 +118,9 @@ namespace SkillSnap.Api.Controllers
                 _context.Projects.Add(project);
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after successful creation
+                _cache.Remove("projects_all");
+
                 // Return the created project with user data
                 var createdProject = await _context.Projects
                     .Include(p => p.PortfolioUser)
@@ -150,6 +174,9 @@ namespace SkillSnap.Api.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after successful update
+                _cache.Remove("projects_all");
+
                 // Return updated project with user data
                 var updatedProject = await _context.Projects
                     .Include(p => p.PortfolioUser)
@@ -186,6 +213,9 @@ namespace SkillSnap.Api.Controllers
 
                 _context.Projects.Remove(project);
                 await _context.SaveChangesAsync();
+
+                // Invalidate cache after successful deletion
+                _cache.Remove("projects_all");
 
                 return Ok(new { message = $"Project '{project.Title}' deleted successfully." });
             }

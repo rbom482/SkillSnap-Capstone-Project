@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SkillSnap.Api.Data;
 using SkillSnap.Api.Models;
 
@@ -11,14 +12,17 @@ namespace SkillSnap.Api.Controllers
     public class SkillsController : ControllerBase
     {
         private readonly SkillSnapContext _context;
+        private readonly IMemoryCache _cache;
 
-        public SkillsController(SkillSnapContext context)
+        public SkillsController(SkillSnapContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         /// <summary>
         /// Get all skills with their associated portfolio user data
+        /// Implements in-memory caching with 5-minute expiration for improved performance
         /// </summary>
         /// <returns>List of all skills</returns>
         [HttpGet]
@@ -26,9 +30,26 @@ namespace SkillSnap.Api.Controllers
         {
             try
             {
-                var skills = await _context.Skills
-                    .Include(s => s.PortfolioUser)
-                    .ToListAsync();
+                const string cacheKey = "skills_all";
+                
+                // Try to get skills from cache first
+                if (!_cache.TryGetValue(cacheKey, out List<Skill>? skills) || skills == null)
+                {
+                    // If not in cache, fetch from database
+                    skills = await _context.Skills
+                        .Include(s => s.PortfolioUser)
+                        .ToListAsync();
+
+                    // Cache the results with 5-minute expiration
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                        SlidingExpiration = TimeSpan.FromMinutes(2),
+                        Priority = CacheItemPriority.Normal
+                    };
+                    
+                    _cache.Set(cacheKey, skills, cacheOptions);
+                }
 
                 return Ok(skills);
             }
@@ -110,6 +131,9 @@ namespace SkillSnap.Api.Controllers
                 _context.Skills.Add(skill);
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after successful creation
+                _cache.Remove("skills_all");
+
                 // Return the created skill with user data
                 var createdSkill = await _context.Skills
                     .Include(s => s.PortfolioUser)
@@ -176,6 +200,9 @@ namespace SkillSnap.Api.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after successful update
+                _cache.Remove("skills_all");
+
                 // Return updated skill with user data
                 var updatedSkill = await _context.Skills
                     .Include(s => s.PortfolioUser)
@@ -212,6 +239,9 @@ namespace SkillSnap.Api.Controllers
 
                 _context.Skills.Remove(skill);
                 await _context.SaveChangesAsync();
+
+                // Invalidate cache after successful deletion
+                _cache.Remove("skills_all");
 
                 return Ok(new { message = $"Skill '{skill.Name}' deleted successfully." });
             }
