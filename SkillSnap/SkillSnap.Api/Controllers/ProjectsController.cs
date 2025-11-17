@@ -13,11 +13,13 @@ namespace SkillSnap.Api.Controllers
     {
         private readonly SkillSnapContext _context;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<ProjectsController> _logger;
 
-        public ProjectsController(SkillSnapContext context, IMemoryCache cache)
+        public ProjectsController(SkillSnapContext context, IMemoryCache cache, ILogger<ProjectsController> logger)
         {
             _context = context;
             _cache = cache;
+            _logger = logger;
         }
 
         /// <summary>
@@ -35,6 +37,8 @@ namespace SkillSnap.Api.Controllers
                 // Try to get projects from cache first
                 if (!_cache.TryGetValue(cacheKey, out List<Project>? projects) || projects == null)
                 {
+                    _logger.LogInformation("Cache MISS for {CacheKey} - Fetching from database", cacheKey);
+                    
                     // If not in cache, fetch from database with optimized query
                     projects = await _context.Projects
                         .AsNoTracking()
@@ -51,6 +55,11 @@ namespace SkillSnap.Api.Controllers
                     };
                     
                     _cache.Set(cacheKey, projects, cacheOptions);
+                    _logger.LogInformation("Cached {Count} projects with key {CacheKey}", projects.Count, cacheKey);
+                }
+                else
+                {
+                    _logger.LogInformation("Cache HIT for {CacheKey} - Returning {Count} cached projects", cacheKey, projects.Count);
                 }
 
                 return Ok(projects);
@@ -123,6 +132,7 @@ namespace SkillSnap.Api.Controllers
 
                 // Invalidate cache after successful creation
                 _cache.Remove("projects_all");
+                _logger.LogInformation("Cache invalidated after project creation - Key: projects_all");
 
                 // Return the created project with user data
                 var createdProject = await _context.Projects

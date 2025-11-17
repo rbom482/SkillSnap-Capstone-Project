@@ -13,11 +13,13 @@ namespace SkillSnap.Api.Controllers
     {
         private readonly SkillSnapContext _context;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<SkillsController> _logger;
 
-        public SkillsController(SkillSnapContext context, IMemoryCache cache)
+        public SkillsController(SkillSnapContext context, IMemoryCache cache, ILogger<SkillsController> logger)
         {
             _context = context;
             _cache = cache;
+            _logger = logger;
         }
 
         /// <summary>
@@ -35,6 +37,8 @@ namespace SkillSnap.Api.Controllers
                 // Try to get skills from cache first
                 if (!_cache.TryGetValue(cacheKey, out List<Skill>? skills) || skills == null)
                 {
+                    _logger.LogInformation("Cache MISS for {CacheKey} - Fetching from database", cacheKey);
+                    
                     // If not in cache, fetch from database with optimized query
                     skills = await _context.Skills
                         .AsNoTracking()
@@ -51,6 +55,12 @@ namespace SkillSnap.Api.Controllers
                     };
                     
                     _cache.Set(cacheKey, skills, cacheOptions);
+                    _logger.LogInformation("Cached {Count} skills with key {CacheKey}", skills.Count, cacheKey);
+                }
+                else
+                {
+                    _logger.LogInformation("Cache HIT for {CacheKey} - Returning {Count} cached skills", cacheKey, skills.Count);
+                }
                 }
 
                 return Ok(skills);

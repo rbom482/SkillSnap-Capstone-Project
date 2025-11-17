@@ -7,10 +7,12 @@ namespace SkillSnap.Client.Services
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly PerformanceMonitorService _performanceMonitor;
 
-        public SkillService(HttpClient httpClient)
+        public SkillService(HttpClient httpClient, PerformanceMonitorService performanceMonitor)
         {
             _httpClient = httpClient;
+            _performanceMonitor = performanceMonitor;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -19,32 +21,35 @@ namespace SkillSnap.Client.Services
         }
 
         /// <summary>
-        /// Get all skills from the API
+        /// Get all skills from the API with performance monitoring
         /// </summary>
         /// <returns>List of skills</returns>
         public async Task<List<Skill>> GetSkillAsync()
         {
-            try
+            return await _performanceMonitor.MeasureAsync("GetAllSkills", async () =>
             {
-                var response = await _httpClient.GetAsync("api/skills");
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var skills = JsonSerializer.Deserialize<List<Skill>>(json, _jsonOptions);
-                    return skills ?? new List<Skill>();
+                    var response = await _httpClient.GetAsync("api/skills");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        var skills = JsonSerializer.Deserialize<List<Skill>>(json, _jsonOptions);
+                        return skills ?? new List<Skill>();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error fetching skills: {response.StatusCode}");
+                        return new List<Skill>();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error fetching skills: {response.StatusCode}");
+                    Console.WriteLine($"Exception in GetSkillAsync: {ex.Message}");
                     return new List<Skill>();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in GetSkillAsync: {ex.Message}");
-                return new List<Skill>();
-            }
+            });
         }
 
         /// <summary>

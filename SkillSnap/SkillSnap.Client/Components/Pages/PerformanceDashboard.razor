@@ -1,0 +1,451 @@
+@page "/performance-dashboard"
+@using SkillSnap.Client.Services
+@inject UserSessionService SessionService
+@inject PerformanceMonitorService PerformanceMonitor
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Performance Dashboard - SkillSnap</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 text-primary">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Performance Dashboard
+                </h1>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary" @onclick="RefreshMetrics">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <button class="btn btn-outline-info" @onclick="ExportData">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                    <button class="btn btn-outline-warning" @onclick="ClearMetrics">
+                        <i class="fas fa-trash me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Performance Indicators -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h5 mb-0">@($"{report?.SessionDuration.TotalMinutes:F1}m")</div>
+                            <div class="small">Session Duration</div>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h5 mb-0">@report?.TotalOperations</div>
+                            <div class="small">Total Operations</div>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tasks fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h5 mb-0">@($"{report?.AverageResponseTime.TotalMilliseconds:F0}ms")</div>
+                            <div class="small">Avg Response Time</div>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-stopwatch fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h5 mb-0">@($"{(report?.CacheHitRatio * 100):F1}%")</div>
+                            <div class="small">Cache Hit Ratio</div>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-memory fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cache Performance -->
+    @if (report?.CacheMetrics.Any() == true)
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-memory me-2"></i>
+                            Cache Performance Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Operation</th>
+                                        <th>Total Requests</th>
+                                        <th>Cache Hits</th>
+                                        <th>Hit Ratio</th>
+                                        <th>Avg Hit Time</th>
+                                        <th>Avg Miss Time</th>
+                                        <th>Performance Gain</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var cache in report.CacheMetrics)
+                                    {
+                                        <tr>
+                                            <td><strong>@cache.Key</strong></td>
+                                            <td>@cache.Value.TotalRequests</td>
+                                            <td>
+                                                <span class="badge bg-success">@cache.Value.CacheHits</span>
+                                                / <span class="badge bg-danger">@cache.Value.CacheMisses</span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="width: 100px;">
+                                                    <div class="progress-bar @GetProgressBarClass(cache.Value.HitRatio)" 
+                                                         style="width: @($"{cache.Value.HitRatio * 100:F1}%")">
+                                                        @($"{cache.Value.HitRatio * 100:F1}%")
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-success">@($"{cache.Value.AverageHitTime:F1}ms")</td>
+                                            <td class="text-danger">@($"{cache.Value.AverageMissTime:F1}ms")</td>
+                                            <td>
+                                                @{
+                                                    var improvement = cache.Value.CacheMisses > 0 && cache.Value.CacheHits > 0 
+                                                        ? ((cache.Value.AverageMissTime - cache.Value.AverageHitTime) / cache.Value.AverageMissTime) * 100 
+                                                        : 0;
+                                                }
+                                                <span class="badge bg-@(improvement > 50 ? "success" : improvement > 20 ? "warning" : "secondary")">
+                                                    @($"{improvement:F1}% faster")
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Recent Operations -->
+    @if (report?.TopSlowOperations.Any() == true)
+    {
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Slowest Operations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            @foreach (var op in report.TopSlowOperations.Take(10))
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@op.Operation</strong>
+                                        <br>
+                                        <small class="text-muted">@op.Timestamp.ToString("HH:mm:ss")</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-@(op.CacheHit ? "success" : "warning") rounded-pill">
+                                            @($"{op.DurationMs:F0}ms")
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">@(op.CacheHit ? "Cache Hit" : "Database")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load Time Analysis -->
+            @if (report.LoadTimeMetrics.Any())
+            {
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-rocket me-2"></i>
+                                Page Load Performance
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @{
+                                var avgLoadTimes = PerformanceMonitor.GetAverageLoadTimes();
+                            }
+                            @if (avgLoadTimes.Any())
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach (var page in avgLoadTimes.OrderByDescending(p => p.Value))
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>@(page.Key)</span>
+                                            <span class="badge bg-@(page.Value > 2000 ? "danger" : page.Value > 1000 ? "warning" : "success") rounded-pill">
+                                                @($"{page.Value:F0}ms")
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-muted text-center py-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No page load metrics available yet
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Performance Timeline -->
+    @if (SessionService.GetPerformanceMetrics().Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Performance Timeline (Last 20 Operations)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @{
+                                var recentMetrics = SessionService.GetPerformanceMetrics()
+                                    .OrderByDescending(m => m.Timestamp)
+                                    .Take(20)
+                                    .Reverse()
+                                    .ToList();
+                            }
+                            @foreach (var metric in recentMetrics)
+                            {
+                                <div class="col-12 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="progress" style="height: 25px;">
+                                                <div class="progress-bar bg-@(metric.CacheHit ? "success" : "info")" 
+                                                     style="width: @($"{Math.Min(metric.DurationMs / 10, 100)}%")"
+                                                     title="@metric.Operation - @($"{metric.DurationMs:F0}ms")">
+                                                    <small>@metric.Operation (@($"{metric.DurationMs:F0}ms"))</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="ms-2">
+                                            <small class="text-muted">@metric.Timestamp.ToString("HH:mm:ss")</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Session Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Session Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-6">User ID:</dt>
+                        <dd class="col-sm-6">@(SessionService.UserId ?? "Anonymous")</dd>
+                        
+                        <dt class="col-sm-6">Session Started:</dt>
+                        <dd class="col-sm-6">@SessionService.SessionStartTime.ToString("MMM dd, HH:mm:ss")</dd>
+                        
+                        <dt class="col-sm-6">Current Page:</dt>
+                        <dd class="col-sm-6">@(SessionService.CurrentPage ?? "Unknown")</dd>
+                        
+                        <dt class="col-sm-6">Navigation Count:</dt>
+                        <dd class="col-sm-6">@SessionService.NavigationCount</dd>
+                        
+                        <dt class="col-sm-6">Operations Count:</dt>
+                        <dd class="col-sm-6">@SessionService.GetPerformanceMetrics().Count</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Current Editing State
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (SessionService.IsEditingProject || SessionService.IsEditingSkill)
+                    {
+                        <div class="alert alert-info">
+                            <h6>Active Editing Session</h6>
+                            @if (SessionService.IsEditingProject)
+                            {
+                                <p class="mb-1">
+                                    <i class="fas fa-project-diagram me-1"></i>
+                                    <strong>Project:</strong> @(SessionService.EditingProjectId?.ToString() ?? "New Project")
+                                </p>
+                            }
+                            @if (SessionService.IsEditingSkill)
+                            {
+                                <p class="mb-1">
+                                    <i class="fas fa-cogs me-1"></i>
+                                    <strong>Skill:</strong> @(SessionService.EditingSkillId?.ToString() ?? "New Skill")
+                                </p>
+                            }
+                            <small class="text-muted">
+                                Started: @SessionService.EditingStartTime?.ToString("HH:mm:ss")
+                            </small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted text-center py-3">
+                            <i class="fas fa-check-circle me-2"></i>
+                            No active editing sessions
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private PerformanceReport? report;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshMetrics();
+    }
+
+    private async Task RefreshMetrics()
+    {
+        report = PerformanceMonitor.GenerateReport();
+        StateHasChanged();
+    }
+
+    private async Task ExportData()
+    {
+        try
+        {
+            var exportData = PerformanceMonitor.ExportMetricsAsJson();
+            var fileName = $"performance_data_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, exportData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting data: {ex.Message}");
+        }
+    }
+
+    private async Task ClearMetrics()
+    {
+        PerformanceMonitor.ClearAllMetrics();
+        await RefreshMetrics();
+    }
+
+    private string GetProgressBarClass(double ratio)
+    {
+        return ratio switch
+        {
+            >= 0.8 => "bg-success",
+            >= 0.6 => "bg-warning", 
+            >= 0.4 => "bg-info",
+            _ => "bg-danger"
+        };
+    }
+}
+
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: all 0.15s ease-in-out;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .progress {
+        border-radius: 0.5rem;
+    }
+
+    .badge {
+        font-size: 0.8em;
+    }
+
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+</style>
+
+<script>
+    window.downloadFile = (filename, content) => {
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(content));
+        element.setAttribute('download', filename);
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    };
+</script>

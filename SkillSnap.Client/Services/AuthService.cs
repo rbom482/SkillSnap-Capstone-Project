@@ -5,11 +5,6 @@ using System.Text.Json;
 
 namespace SkillSnap.Client.Services
 {
-    /// <summary>
-    /// Handles JWT authentication for the SkillSnap Blazor client application.
-    /// Manages user login, registration, token storage, and automatic token injection into HTTP requests.
-    /// Implements secure token storage using browser localStorage and provides real-time authentication state changes.
-    /// </summary>
     public class AuthService
     {
         private readonly HttpClient _httpClient;
@@ -17,31 +12,15 @@ namespace SkillSnap.Client.Services
         private string? _currentToken;
         private UserInfo? _currentUser;
 
-        /// <summary>
-        /// Initializes a new instance of the AuthService with required dependencies.
-        /// </summary>
-        /// <param name="httpClient">HTTP client for API communication - automatically configured with JWT bearer tokens</param>
-        /// <param name="jsRuntime">JavaScript interop for secure browser localStorage access</param>
         public AuthService(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
             _jsRuntime = jsRuntime;
         }
 
-        /// <summary>
-        /// Event fired when authentication state changes (login/logout/token refresh).
-        /// Components can subscribe to this to update UI based on authentication status.
-        /// </summary>
         public event EventHandler<AuthenticationStateChangedEventArgs>? AuthenticationStateChanged;
 
-        /// <summary>
-        /// Gets whether the user is currently authenticated (has a valid JWT token).
-        /// </summary>
         public bool IsAuthenticated => !string.IsNullOrEmpty(_currentToken);
-        
-        /// <summary>
-        /// Gets the current authenticated user's information, or null if not authenticated.
-        /// </summary>
         public UserInfo? CurrentUser => _currentUser;
 
         /// <summary>

@@ -78,9 +78,13 @@
         <ItemTemplate Context="project">
             <div class="project-card">
                 <div class="project-image">
-                    <img src="@(!string.IsNullOrEmpty(project.ImageUrl) ? project.ImageUrl : "https://via.placeholder.com/400x200/6c757d/ffffff?text=No+Image")" 
+                    <img src="@(!string.IsNullOrEmpty(project.ImageUrl) ? project.ImageUrl : $"https://via.placeholder.com/400x200/{GetRandomColor()}/ffffff?text={Uri.EscapeDataString(project.Title)}")" 
                          alt="@project.Title" 
-                         loading="lazy" />
+                         loading="lazy" 
+                         class="project-thumbnail" />
+                    <div class="image-overlay">
+                        <span class="project-type">💻 Web App</span>
+                    </div>
                 </div>
                 <div class="project-content">
                     <h3 class="project-title">@project.Title</h3>
@@ -134,17 +138,42 @@
 
     .projects-header {
         text-align: center;
-        margin-bottom: 3rem;
+        margin-bottom: 4rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 16px;
+        margin: -2rem -2rem 4rem -2rem;
     }
 
-    .projects-header h1 {
-        color: #333;
+    .header-content h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
         margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    .projects-header p {
-        color: #666;
-        font-size: 1.1rem;
+    .lead {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .stat-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.3);
     }
 
     .projects-grid {
@@ -512,5 +541,14 @@
             isDeleting = false;
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Generates a random color for project placeholder images to create visual variety
+    /// </summary>
+    private string GetRandomColor()
+    {
+        var colors = new[] { "4A90E2", "7B68EE", "50E3C2", "F5A623", "D0021B", "9013FE", "00C851", "FF6900" };
+        return colors[new Random().Next(colors.Length)];
     }
 }

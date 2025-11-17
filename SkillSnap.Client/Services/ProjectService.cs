@@ -7,10 +7,12 @@ namespace SkillSnap.Client.Services
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly PerformanceMonitorService _performanceMonitor;
 
-        public ProjectService(HttpClient httpClient)
+        public ProjectService(HttpClient httpClient, PerformanceMonitorService performanceMonitor)
         {
             _httpClient = httpClient;
+            _performanceMonitor = performanceMonitor;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -19,61 +21,67 @@ namespace SkillSnap.Client.Services
         }
 
         /// <summary>
-        /// Get all projects from the API
+        /// Get all projects from the API with performance monitoring
         /// </summary>
         /// <returns>List of projects</returns>
         public async Task<List<Project>> GetProjectAsync()
         {
-            try
+            return await _performanceMonitor.MeasureAsync("GetAllProjects", async () =>
             {
-                var response = await _httpClient.GetAsync("api/projects");
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var projects = JsonSerializer.Deserialize<List<Project>>(json, _jsonOptions);
-                    return projects ?? new List<Project>();
+                    var response = await _httpClient.GetAsync("api/projects");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        var projects = JsonSerializer.Deserialize<List<Project>>(json, _jsonOptions);
+                        return projects ?? new List<Project>();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error fetching projects: {response.StatusCode}");
+                        return new List<Project>();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error fetching projects: {response.StatusCode}");
+                    Console.WriteLine($"Exception in GetProjectAsync: {ex.Message}");
                     return new List<Project>();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in GetProjectAsync: {ex.Message}");
-                return new List<Project>();
-            }
+            });
         }
 
         /// <summary>
-        /// Get a specific project by ID
+        /// Get a specific project by ID with performance monitoring
         /// </summary>
         /// <param name="id">Project ID</param>
         /// <returns>Project details or null</returns>
         public async Task<Project?> GetProjectByIdAsync(int id)
         {
-            try
+            return await _performanceMonitor.MeasureAsync($"GetProjectById_{id}", async () =>
             {
-                var response = await _httpClient.GetAsync($"api/projects/{id}");
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<Project>(json, _jsonOptions);
+                    var response = await _httpClient.GetAsync($"api/projects/{id}");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        return JsonSerializer.Deserialize<Project>(json, _jsonOptions);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error fetching project {id}: {response.StatusCode}");
+                        return null;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error fetching project {id}: {response.StatusCode}");
+                    Console.WriteLine($"Exception in GetProjectByIdAsync: {ex.Message}");
                     return null;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in GetProjectByIdAsync: {ex.Message}");
-                return null;
-            }
+            });
         }
 
         /// <summary>
@@ -90,44 +98,47 @@ namespace SkillSnap.Client.Services
                 return ApiResult<Project>.Failure(validationResult.ErrorMessage!);
             }
 
-            try
+            return await _performanceMonitor.MeasureAsync("AddProject", async () =>
             {
-                var json = JsonSerializer.Serialize(newProject, _jsonOptions);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                var response = await _httpClient.PostAsync("api/projects", content);
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    var project = JsonSerializer.Deserialize<Project>(responseJson, _jsonOptions);
-                    return ApiResult<Project>.Success(project!);
+                    var json = JsonSerializer.Serialize(newProject, _jsonOptions);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    
+                    var response = await _httpClient.PostAsync("api/projects", content);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseJson = await response.Content.ReadAsStringAsync();
+                        var project = JsonSerializer.Deserialize<Project>(responseJson, _jsonOptions);
+                        return ApiResult<Project>.Success(project!);
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        var userFriendlyMessage = GetUserFriendlyErrorMessage(response.StatusCode, errorContent);
+                        Console.WriteLine($"Error creating project: {response.StatusCode} - {errorContent}");
+                        return ApiResult<Project>.Failure(userFriendlyMessage);
+                    }
                 }
-                else
+                catch (HttpRequestException httpEx)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    var userFriendlyMessage = GetUserFriendlyErrorMessage(response.StatusCode, errorContent);
-                    Console.WriteLine($"Error creating project: {response.StatusCode} - {errorContent}");
-                    return ApiResult<Project>.Failure(userFriendlyMessage);
+                    var message = "Unable to connect to the server. Please check your internet connection and try again.";
+                    Console.WriteLine($"HTTP Exception in AddProjectAsync: {httpEx.Message}");
+                    return ApiResult<Project>.Failure(message);
                 }
-            }
-            catch (HttpRequestException httpEx)
-            {
-                var message = "Unable to connect to the server. Please check your internet connection and try again.";
-                Console.WriteLine($"HTTP Exception in AddProjectAsync: {httpEx.Message}");
-                return ApiResult<Project>.Failure(message);
-            }
-            catch (TaskCanceledException)
-            {
-                var message = "The request timed out. Please try again.";
-                return ApiResult<Project>.Failure(message);
-            }
-            catch (Exception ex)
-            {
-                var message = "An unexpected error occurred. Please try again later.";
-                Console.WriteLine($"Exception in AddProjectAsync: {ex.Message}");
-                return ApiResult<Project>.Failure(message);
-            }
+                catch (TaskCanceledException)
+                {
+                    var message = "The request timed out. Please try again.";
+                    return ApiResult<Project>.Failure(message);
+                }
+                catch (Exception ex)
+                {
+                    var message = "An unexpected error occurred. Please try again later.";
+                    Console.WriteLine($"Exception in AddProjectAsync: {ex.Message}");
+                    return ApiResult<Project>.Failure(message);
+                }
+            });
         }
 
         /// <summary>
@@ -137,30 +148,33 @@ namespace SkillSnap.Client.Services
         /// <returns>Updated project or null if failed</returns>
         public async Task<Project?> UpdateProjectAsync(Project project)
         {
-            try
+            return await _performanceMonitor.MeasureAsync($"UpdateProject_{project.Id}", async () =>
             {
-                var json = JsonSerializer.Serialize(project, _jsonOptions);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                var response = await _httpClient.PutAsync($"api/projects/{project.Id}", content);
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<Project>(responseJson, _jsonOptions);
+                    var json = JsonSerializer.Serialize(project, _jsonOptions);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    
+                    var response = await _httpClient.PutAsync($"api/projects/{project.Id}", content);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseJson = await response.Content.ReadAsStringAsync();
+                        return JsonSerializer.Deserialize<Project>(responseJson, _jsonOptions);
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"Error updating project: {response.StatusCode} - {errorContent}");
+                        return null;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Error updating project: {response.StatusCode} - {errorContent}");
+                    Console.WriteLine($"Exception in UpdateProjectAsync: {ex.Message}");
                     return null;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in UpdateProjectAsync: {ex.Message}");
-                return null;
-            }
+            });
         }
 
         /// <summary>
@@ -170,16 +184,19 @@ namespace SkillSnap.Client.Services
         /// <returns>True if successful</returns>
         public async Task<bool> DeleteProjectAsync(int id)
         {
-            try
+            return await _performanceMonitor.MeasureAsync($"DeleteProject_{id}", async () =>
             {
-                var response = await _httpClient.DeleteAsync($"api/projects/{id}");
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in DeleteProjectAsync: {ex.Message}");
-                return false;
-            }
+                try
+                {
+                    var response = await _httpClient.DeleteAsync($"api/projects/{id}");
+                    return response.IsSuccessStatusCode;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception in DeleteProjectAsync: {ex.Message}");
+                    return false;
+                }
+            });
         }
 
         /// <summary>
@@ -189,55 +206,32 @@ namespace SkillSnap.Client.Services
         /// <returns>List of user's projects</returns>
         public async Task<List<Project>> GetProjectsByUserAsync(int userId)
         {
-            try
+            return await _performanceMonitor.MeasureAsync($"GetProjectsByUser_{userId}", async () =>
             {
-                var response = await _httpClient.GetAsync($"api/projects/user/{userId}");
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var projects = JsonSerializer.Deserialize<List<Project>>(json, _jsonOptions);
-                    return projects ?? new List<Project>();
+                    var response = await _httpClient.GetAsync($"api/projects/user/{userId}");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        var projects = JsonSerializer.Deserialize<List<Project>>(json, _jsonOptions);
+                        return projects ?? new List<Project>();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error fetching user projects: {response.StatusCode}");
+                        return new List<Project>();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error fetching user projects: {response.StatusCode}");
+                    Console.WriteLine($"Exception in GetProjectsByUserAsync: {ex.Message}");
                     return new List<Project>();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in GetProjectsByUserAsync: {ex.Message}");
-                return new List<Project>();
-            }
+            });
         }
-    }
 
-    // Project model for client-side use
-    public class Project
-    {
-        public int Id { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string ImageUrl { get; set; } = string.Empty;
-        public string? GitHubUrl { get; set; }
-        public string? LiveDemoUrl { get; set; }
-        public string? Technologies { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public int PortfolioUserId { get; set; }
-        public PortfolioUser? PortfolioUser { get; set; }
-    }
-
-    // PortfolioUser model for client-side use
-    public class PortfolioUser
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Bio { get; set; } = string.Empty;
-        public string ProfileImageUrl { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
         /// <summary>
         /// Validates a project before sending to API
         /// </summary>
@@ -302,6 +296,33 @@ namespace SkillSnap.Client.Services
                 _ => "An error occurred while creating the project. Please try again."
             };
         }
+    }
+
+    // Project model for client-side use
+    public class Project
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public string? GitHubUrl { get; set; }
+        public string? LiveDemoUrl { get; set; }
+        public string? Technologies { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public int PortfolioUserId { get; set; }
+        public PortfolioUser? PortfolioUser { get; set; }
+    }
+
+    // PortfolioUser model for client-side use
+    public class PortfolioUser
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Bio { get; set; } = string.Empty;
+        public string ProfileImageUrl { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 
     /// <summary>
