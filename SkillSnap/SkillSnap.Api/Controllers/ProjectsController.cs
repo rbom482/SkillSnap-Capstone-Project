@@ -35,9 +35,11 @@ namespace SkillSnap.Api.Controllers
                 // Try to get projects from cache first
                 if (!_cache.TryGetValue(cacheKey, out List<Project>? projects) || projects == null)
                 {
-                    // If not in cache, fetch from database
+                    // If not in cache, fetch from database with optimized query
                     projects = await _context.Projects
+                        .AsNoTracking()
                         .Include(p => p.PortfolioUser)
+                        .OrderBy(p => p.CreatedAt)
                         .ToListAsync();
 
                     // Cache the results with 5-minute expiration
@@ -70,6 +72,7 @@ namespace SkillSnap.Api.Controllers
             try
             {
                 var project = await _context.Projects
+                    .AsNoTracking()
                     .Include(p => p.PortfolioUser)
                     .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -235,18 +238,26 @@ namespace SkillSnap.Api.Controllers
         {
             try
             {
-                var userExists = await _context.PortfolioUsers
-                    .AnyAsync(u => u.Id == userId);
-
-                if (!userExists)
-                {
-                    return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
-                }
-
+                // Optimize: Check user existence while fetching projects in single query
                 var projects = await _context.Projects
+                    .AsNoTracking()
                     .Include(p => p.PortfolioUser)
                     .Where(p => p.PortfolioUserId == userId)
+                    .OrderBy(p => p.CreatedAt)
                     .ToListAsync();
+
+                // If no projects found, verify if user exists
+                if (!projects.Any())
+                {
+                    var userExists = await _context.PortfolioUsers
+                        .AsNoTracking()
+                        .AnyAsync(u => u.Id == userId);
+                    
+                    if (!userExists)
+                    {
+                        return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
+                    }
+                }
 
                 return Ok(projects);
             }

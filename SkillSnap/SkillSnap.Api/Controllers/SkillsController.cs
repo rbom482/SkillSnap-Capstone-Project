@@ -35,9 +35,11 @@ namespace SkillSnap.Api.Controllers
                 // Try to get skills from cache first
                 if (!_cache.TryGetValue(cacheKey, out List<Skill>? skills) || skills == null)
                 {
-                    // If not in cache, fetch from database
+                    // If not in cache, fetch from database with optimized query
                     skills = await _context.Skills
+                        .AsNoTracking()
                         .Include(s => s.PortfolioUser)
+                        .OrderBy(s => s.Name)
                         .ToListAsync();
 
                     // Cache the results with 5-minute expiration
@@ -70,6 +72,7 @@ namespace SkillSnap.Api.Controllers
             try
             {
                 var skill = await _context.Skills
+                    .AsNoTracking()
                     .Include(s => s.PortfolioUser)
                     .FirstOrDefaultAsync(s => s.Id == id);
 
@@ -102,8 +105,16 @@ namespace SkillSnap.Api.Controllers
                     return BadRequest(ModelState);
                 }
 
-                // Verify that the PortfolioUser exists
+                // Validate skill level first (fastest validation)
+                var validLevels = new[] { "Beginner", "Intermediate", "Advanced", "Expert" };
+                if (!validLevels.Contains(skill.Level))
+                {
+                    return BadRequest(new { message = "Skill level must be one of: Beginner, Intermediate, Advanced, Expert" });
+                }
+
+                // Optimize: Check user existence and duplicates with AsNoTracking
                 var userExists = await _context.PortfolioUsers
+                    .AsNoTracking()
                     .AnyAsync(u => u.Id == skill.PortfolioUserId);
 
                 if (!userExists)
@@ -111,15 +122,9 @@ namespace SkillSnap.Api.Controllers
                     return BadRequest(new { message = $"Portfolio user with ID {skill.PortfolioUserId} does not exist." });
                 }
 
-                // Validate skill level
-                var validLevels = new[] { "Beginner", "Intermediate", "Advanced", "Expert" };
-                if (!validLevels.Contains(skill.Level))
-                {
-                    return BadRequest(new { message = "Skill level must be one of: Beginner, Intermediate, Advanced, Expert" });
-                }
-
-                // Check for duplicate skills for the same user
+                // Check for duplicate skills for the same user with optimized query
                 var existingSkill = await _context.Skills
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.Name.ToLower() == skill.Name.ToLower() && 
                                             s.PortfolioUserId == skill.PortfolioUserId);
 
@@ -182,8 +187,9 @@ namespace SkillSnap.Api.Controllers
                     return NotFound(new { message = $"Skill with ID {id} not found." });
                 }
 
-                // Check for duplicate skill names (excluding current skill)
+                // Optimize: Check for duplicate skill names with AsNoTracking
                 var duplicateSkill = await _context.Skills
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.Name.ToLower() == skill.Name.ToLower() && 
                                             s.PortfolioUserId == skill.PortfolioUserId && 
                                             s.Id != id);
@@ -261,19 +267,26 @@ namespace SkillSnap.Api.Controllers
         {
             try
             {
-                var userExists = await _context.PortfolioUsers
-                    .AnyAsync(u => u.Id == userId);
-
-                if (!userExists)
-                {
-                    return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
-                }
-
+                // Optimize: Fetch skills first, then check user existence if needed
                 var skills = await _context.Skills
+                    .AsNoTracking()
                     .Include(s => s.PortfolioUser)
                     .Where(s => s.PortfolioUserId == userId)
                     .OrderBy(s => s.Name)
                     .ToListAsync();
+
+                // If no skills found, verify if user exists
+                if (!skills.Any())
+                {
+                    var userExists = await _context.PortfolioUsers
+                        .AsNoTracking()
+                        .AnyAsync(u => u.Id == userId);
+                    
+                    if (!userExists)
+                    {
+                        return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
+                    }
+                }
 
                 return Ok(skills);
             }
@@ -293,15 +306,9 @@ namespace SkillSnap.Api.Controllers
         {
             try
             {
-                var userExists = await _context.PortfolioUsers
-                    .AnyAsync(u => u.Id == userId);
-
-                if (!userExists)
-                {
-                    return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
-                }
-
-                var skills = await _context.Skills
+                // Optimize: Perform grouped query with AsNoTracking for better performance
+                var skillGroups = await _context.Skills
+                    .AsNoTracking()
                     .Where(s => s.PortfolioUserId == userId)
                     .GroupBy(s => s.Level)
                     .Select(g => new
@@ -310,10 +317,27 @@ namespace SkillSnap.Api.Controllers
                         Count = g.Count(),
                         Skills = g.OrderBy(s => s.Name).ToList()
                     })
-                    .OrderBy(x => Array.IndexOf(new[] { "Beginner", "Intermediate", "Advanced", "Expert" }, x.Level))
                     .ToListAsync();
 
-                return Ok(skills);
+                // If no skills found, verify if user exists
+                if (!skillGroups.Any())
+                {
+                    var userExists = await _context.PortfolioUsers
+                        .AsNoTracking()
+                        .AnyAsync(u => u.Id == userId);
+                    
+                    if (!userExists)
+                    {
+                        return NotFound(new { message = $"Portfolio user with ID {userId} not found." });
+                    }
+                }
+
+                // Order by skill level hierarchy and return
+                var orderedGroups = skillGroups
+                    .OrderBy(x => Array.IndexOf(new[] { "Beginner", "Intermediate", "Advanced", "Expert" }, x.Level))
+                    .ToList();
+
+                return Ok(orderedGroups);
             }
             catch (Exception ex)
             {
