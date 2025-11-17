@@ -1,0 +1,135 @@
+@* ProfileCard.razor - Reusable component for displaying user profiles *@
+
+<div class="profile-card @CssClass">
+    <div class="profile-avatar">
+        @if (!string.IsNullOrEmpty(ImageUrl))
+        {
+            <img src="@ImageUrl" alt="@Name's profile picture" class="avatar-image" />
+        }
+        else
+        {
+            <div class="avatar-placeholder">
+                @GetInitials(Name)
+            </div>
+        }
+    </div>
+    
+    <div class="profile-content">
+        <h3 class="profile-name">@Name</h3>
+        @if (!string.IsNullOrEmpty(Bio))
+        {
+            <p class="profile-bio">@Bio</p>
+        }
+        @if (ShowActions)
+        {
+            <div class="profile-actions">
+                @ChildContent
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .profile-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .profile-avatar {
+        flex-shrink: 0;
+    }
+
+    .avatar-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #007bff;
+    }
+
+    .avatar-placeholder {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border: 3px solid #007bff;
+    }
+
+    .profile-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .profile-name {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .profile-bio {
+        margin: 0 0 1rem 0;
+        color: #666;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .profile-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Responsive design */
+    @@media (max-width: 576px) {
+        .profile-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .profile-content {
+            width: 100%;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Bio { get; set; } = "";
+    [Parameter] public string ImageUrl { get; set; } = "";
+    [Parameter] public bool ShowActions { get; set; } = false;
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "??";
+
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 1)
+            return words[0].Substring(0, Math.Min(2, words[0].Length)).ToUpper();
+        
+        return (words[0][0].ToString() + (words.Length > 1 ? words[1][0].ToString() : "")).ToUpper();
+    }
+}

@@ -1,0 +1,13 @@
+### Test SkillSnap Blazor Components
+
+### Profile Page
+GET http://localhost:5193/profile
+
+### Projects Page  
+GET http://localhost:5193/projects
+
+### Skills Page
+GET http://localhost:5193/skills
+
+### Home Page
+GET http://localhost:5193/
